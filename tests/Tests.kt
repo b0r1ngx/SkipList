@@ -1,8 +1,8 @@
 class Tests {
 
-    val skipList = SkipList()
+    val skipList = SkipList<Int>()
 
-    fun testFind() {
+    fun testContains() {
 
     }
 
@@ -14,4 +14,11 @@ class Tests {
 
     }
 
+    fun testIndexOf() {
+
+    }
+
+    fun testIterator() {
+
+    }
 }
