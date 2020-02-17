@@ -1,220 +1,288 @@
+import java.util.*
 import kotlin.math.E
-import kotlin.random.Random
 
-//SkiplistList = listOf(1,2,3,...,n)
-/**
-//Выполнение по 4.3 я так понял должен иметь обязательно такой вид изначальго листа от 1,2,3 до Н
-//четко и последоватеьно, чтобы length, на которых основаны основные функции правильно работали
-*/
-class SkipList(): MutableList<Any> {
+class SkipList<T>: MutableList<T> {
 
     override var size: Int = 0
-        get() = this.size
-    var n = 0
-    val p = 1/E //more efficient probability for list of elements comes to +infinity
-    val p1 = 5/16//maybe take 5/16 for probability property and lists size < 5000
-    val MAX_HEIGHT = 15 // for example?
-    var H = 15 //MAX_HEIGHT
-    val sentinel = Node(first(), H) // И он не понимает что я хочу от него здесь, да я если честно не пойму)
-    val tail = Node(sentinel.next, H)//NIH - нужен ли тейл?
+    /**
+     * include 0 (0,1,2..11) my predict its good for 100k elements (in 8, 16, 32)
+     */
+    val MAX_HEIGHT = 12
 
-    class Node(var element: Any?, H: Int) {
-        //Node[] next
-        //next = (Node[])Array.newInstance(Node.class, h+1)
-        //var next: Array<Node> = Array.newInstance(Node::class.java, h + 1) as Array<Node>
-        //var nex = Array<Node>(H + 1)
-        // var nex = Array<Node> = arrayOf(null, H + 1)
-        var next: Array<Node> = arrayOf(Node::class.java, H + 1) as Array<Node>
-        var length = IntArray(H + 1)
-
-        fun height(): Int {
-            return next.size - 1
+    val head: Node<T>? = null
+    /**
+     * One of my thing in mind, for practical realisation best chance is 1/2,
+     * use 5/16 if u have less than 5k elements, using 1/E for 1kk elements and more(best for +unlimited)
+     */
+    private val CHANCE = 1/E
+    /**
+     * finally ain't needed, cos tail in realisation is just checked is next(end/NIL) is null
+     *
+     * @thanks Petrov M.A.
+     */
+    val tail = head?.next?.add(null)
+    /**
+     * init the tower of first nulls elements of MAX_HEIGHT
+     */
+    var heads = ArrayList<Node<T>?>(MAX_HEIGHT)
+    init {//size of heads is 12, so its a list on a level 0 with all elements
+        //and a heads+1 list with fewer elements
+        for (level in 0 until MAX_HEIGHT) {
+            heads.add(level, null)
         }
     }
 
-//    internal class Node<T>(var element: T, h: Int) {
-//        var next: Array<Node<T>> = Array<Node<T>>(h + 1)
-//        fun level(): Int {
-//            return next.size - 1
-//        }
-//    }
-
-    //determine the height - k, of a new node
-    fun pickHeight(): Int {
-        val z: Int = Random.nextInt() //rand.nextInt()
-        var k = 0
-        var m = 1
-        while (z and m != 0) {
-            k++
-            m = m shl 1
+    inner class Node<T>(private var element: T) {
+        //val nextAsQuestion = LinkedList<Node<T>?>()
+        var next = ArrayList<Node<T>?>() //link to next
+        fun level(): Int = next.size - 1
+        fun next(lvl: Int): Node<T>? = next[lvl]
+        fun value(): T = element
+        fun setValue(value: T) {
+            element = value
         }
-        return k
-    }
-
-    fun findPred(index: Int): Node? {
-        var r = H //Int
-        var u = sentinel //Node(u)
-        var j = -1 // the index of u
-        while (r >= 0) {
-            while (u.next[r] != null && j + u.length[r] < index) {// -1 + (sentinel).length[H] < index
-                j += u.length[r]
-                u = u.next[r]
-            }
-            r--
+        /**
+         * Prepare the tower for added Node(i.e. element)
+         */
+        init {
+            var lvl = 1
+            while (Math.random() < CHANCE && lvl < MAX_HEIGHT)
+                lvl++
+            next = ArrayList(lvl)
+            for (indexOfElement in 0 until lvl)
+                next.add(indexOfElement, null)
         }
-        return u
     }
 
-
-
-    override fun get(index: Int): Any {
-        if (index < 0 || index > n - 1) throw IndexOutOfBoundsException()
-        return findPred(index)!!.next[0].element!!
-    }
-
-    override fun set(index: Int, element: Any): Any {
-        if (index < 0 || index > n - 1) throw IndexOutOfBoundsException()
-        val u = findPred(index)!!.next[0]
-        val y: Any? = u.element
-        u.element = element
-        return y!!
-    }
-
-    override fun add(index: Int, element: Any) {
-        if (index < 0 || index > n) throw IndexOutOfBoundsException()
-        val w = Node(element, pickHeight())
-        if (w.height() > H) H = w.height()
-        add(index, w)
-    }
-
-    fun add(i: Int, w: Node): Node? {
-        val height = w.height()
-        var u = sentinel
-        var j = -1 // index of u
-        var r: Int = H
-        while (r >= 0) {
-            while (u.next[r] != null && j + u.length[r] < i) {
-                j += u.length[r]
-                u = u.next[r]
-            }
-            u.length[r]++ // to account for new node in list 0
-            if (r <= height) {
-                w.next[r] = u.next[r]
-                u.next[r] = w
-                w.length[r] = u.length[r] - (i - j)
-                u.length[r] = i - j
-            }
-            r--
-        }
-        n++
-        return u
-    }
-
-    override fun removeAt(index: Int): Boolean { //:Any
-        if (index < 0 || index > n - 1) throw IndexOutOfBoundsException()
-        var x: Any? = null
-        var u: Node = sentinel
-        var j = -1 // index of node u
-        var r: Int = H
-        while (r >= 0) {
-            while (u.next[r] != null && j + u.length[r] < index) {//-1 + sentinel.length[H] < index of remove element
-                j += u.length[r]
-                u = u.next[r]
-            }
-            u.length[r]-- // for the node we are removing
-            if (j + u.length[r] + 1 == index && u.next[r] != null) {
-                x = u.next[r].element
-                u.length[r] += u.next[r].length[r]
-                u.next[r] = u.next[r].next[r]
-                if (u == sentinel && u.next[r] == null) H--
-            }
-            r--
-        }
-        n--
-        return true //return x if fun (): Any<--
-    }
-    //Returns true if element is found in the collection.
-    override fun contains(element: Any): Boolean {
-        TODO()
-    }
-    //Checks if all elements in the specified collection are contained in this collection.
-    override fun containsAll(elements: Collection<Any>): Boolean {
+    override fun get(index: Int): T {
         TODO("not implemented")
     }
 
-    override fun isEmpty(): Boolean {
+    override fun set(index: Int, element: T): T {
         TODO("not implemented")
     }
 
-    override fun iterator(): MutableIterator<Any> {
-        TODO("not implemented")
+    //find the element
+    override fun contains(element: T): Boolean {
+        val contains = element as Comparable<T>
+        var lvl = heads.size - 1
+        //check how biggest tower is, for a little get more speed of a search
+        //but in book, really found this doesn't helps a much, or a little bit
+        //so it was really expected:)
+        var temp = heads[lvl]
+        while (temp == null) lvl-- //we need make a link from -infinity to smth to work with this
+        while (lvl >= 0) {
+            if (temp != null) {
+                if (contains == temp.value())
+                    return true
+                if (lvl == 0 && temp.next(0) == null || contains < temp.value())
+                    return false
+            }
+            when {
+                temp?.next(lvl) == null -> lvl--
+                contains < temp.next(lvl)!!.value() -> lvl--
+                contains >= temp.next(lvl)!!.value() -> temp = temp.next(lvl)
+            }
+        }
+        return false
     }
-    //Adds the specified element to the end of this list.
-    override fun add(element: Any): Boolean {
-        if (size < 2) throw IndexOutOfBoundsException()
-        add(n - 1, element)
-        return get(n-1) == element
-    }
-    //Inserts all of the elements of the specified collection elements into this list at the specified index.
-    override fun addAll(index: Int, elements: Collection<Any>): Boolean {
-        TODO("not implemented")
-    }
-    //Adds all of the elements of the specified collection to the end of this list.
-    override fun addAll(elements: Collection<Any>): Boolean {
-        if (size < 2) throw IndexOutOfBoundsException()
+
+    override fun containsAll(elements: Collection<T>): Boolean {
         for (element in elements)
-            add(n - 1, element)
-        return containsAll(elements)
+            if (!contains(element))
+                return false
+        return true
     }
-    //Removes all elements from this collection.
-    override fun clear() {
-        TODO("not implemented")
-    }
-    //Returns a list iterator over the elements in this list (in proper sequence).
-    override fun listIterator(): MutableListIterator<Any> {
-        TODO("not implemented")
-    }
-    //Returns a list iterator over the elements in this list (in proper sequence), starting at the specified index.
-    override fun listIterator(index: Int): MutableListIterator<Any> {
-        TODO("not implemented")
-    }
-    //Removes a single instance of the specified element from this collection, if it is present.
-    override fun remove(element: Any): Boolean {
-        TODO("not implemented")
-    }
-    //Removes all of this collection's elements that are also contained in the specified collection.
-    override fun removeAll(elements: Collection<Any>): Boolean {
-        TODO("not implemented")
-    }
-    //Retains only the elements in this collection that are contained in the specified collection.
-    override fun retainAll(elements: Collection<Any>): Boolean {
-        TODO("not implemented")
-    }
-    //Returns a view of the portion of this list between the specified fromIndex (inclusive) and
-    // toIndex (exclusive). The returned list is backed by this list,
-    // so non-structural changes in the returned list are reflected in this list, and vice-versa.
-    override fun subList(fromIndex: Int, toIndex: Int): MutableList<Any> {
-        if (size < 2) throw IndexOutOfBoundsException()
-        return mutableListOf() //just for no warning
-    }
-    //get index of element, which in list
-    override fun indexOf(element: Any): Int {
-        if (n < 0 || size < 2) throw IndexOutOfBoundsException()
-        var x: Any? = null
-        var u: Node = sentinel //head(u)
-        var j = -1 // index of node u
-        var r: Int = H // visota levela
-        val count = 0
-        while (r >= 0) {
 
+    override fun add(element: T): Boolean {
+        val add = element as Comparable<T> //for comparing!)
+        val addThis: Node<T> = Node(element)
+        val atLevel = addThis.level()
+//potential high of new added node
+        val path = ArrayList<Node<T>?>(MAX_HEIGHT)
+        for (each in 0 until MAX_HEIGHT)
+            path.add(each, null)
+
+        var thisNode: Node<T>? = head
+        for (lvl in MAX_HEIGHT - 1 downTo 0) {
+            if (thisNode == null) {
+                if (heads[lvl] == null || add < heads[lvl]!!.value())
+                    path[lvl] = null
+                else {
+                    thisNode = heads[lvl]
+                    while (thisNode?.next(lvl) != null && add > thisNode.next(lvl)!!.value())
+                        thisNode = thisNode.next(lvl)!! //not null already so then add
+                    path[lvl] = thisNode
+                }
+            } else {
+                while ( thisNode?.next(lvl) != null && add > thisNode.next(lvl)!!.value())
+                    thisNode = thisNode.next(lvl)!!
+                path[lvl] = thisNode
+            }
         }
-        return -1
+//add new element to structure
+        for (lvl in 0 until atLevel) {
+            if (path[lvl] == null) {
+                addThis.next[lvl] = heads[lvl]
+                heads[lvl] = addThis
+            } else {
+                addThis.next[lvl] = path[lvl]!!.next(lvl)
+                path[lvl]!!.next[lvl] = addThis
+            }
+        }
+        size++
+        return true
     }
-//the same as indexOf() cos skip list ain't have same elements, same only at levels, so that means different
-    override fun lastIndexOf(element: Any): Int = indexOf(element)
+
+    override fun add(index: Int, element: T) {
+        TODO("not implemented")
+    }
+
+    override fun addAll(index: Int, elements: Collection<T>): Boolean {
+        TODO("not implemented")
+    }
+    //i bet this doesn't works properly, but for first time it good
+    override fun addAll(elements: Collection<T>): Boolean {
+        var default = false
+        for (element in elements)
+            if (add(element))
+                default = true
+        return default
+    }
+
+    override fun remove(element: T): Boolean {
+        size--
+        return true
+    }
+
+    /**
+     * Removes all of this collection's elements that are also contained in the specified collection.
+     * Return true if any of the specified elements was removed from the collection,
+     * false if the collection was not modified.
+     */
+    //for example need to work on this
+    //my SkipList(1,3,5,6,8,9)
+    //collection: (4,5)
+    //after removeAll(collection), we need see (1,3,6,8,9)
+    override fun removeAll(elements: Collection<T>): Boolean {
+        //("for (i in elements) if (SkipList().contains(i)) remove(i)")
+        var modified = false
+        val collection = ArrayList<T>(elements)
+        for (i in collection.indices) {
+            modified = true
+        }
+        return modified
+    }
+
+    //remove at index
+    override fun removeAt(index: Int): T {
+        if (index < 0 || index >= size)
+            throw IndexOutOfBoundsException("List properly not contains index like this!")
+        else if (index == 0) {
+            val special = heads[0]!!
+            val element = special.value()
+            for(i in 0 until special.level())
+                heads[i] = special.next(i)
+            size--
+            return element!!
+        } else {
+            val element = get(index)
+            val removeAt = element as Comparable<T>
+
+            //potential high of tower was deleted
+            val path = ArrayList<Node<T>?>(MAX_HEIGHT)
+            for (each in 0 until MAX_HEIGHT)
+                path.add(each, null)
+
+            var thisNode: Node<T>? = head
+            for (lvl in MAX_HEIGHT - 1 downTo 0)
+                if (thisNode == null) {
+                    if (heads[lvl] == null || removeAt < heads[lvl]!!.value())
+                        path[lvl] = null
+                    else {
+                        thisNode = heads[lvl]
+                        while (thisNode!!.next(lvl) != null && removeAt > thisNode.next(lvl)!!.value())
+                            thisNode = thisNode.next(lvl)
+                        path[lvl] = thisNode
+                    }
+                } else {
+                    while(thisNode!!.next(lvl) != null && removeAt > thisNode.next(lvl)!!.value())
+                        thisNode = thisNode.next(lvl)
+                    path[lvl] = thisNode
+                }
+            //deleting all the nodes in the tower
+            val current = path[0]!!
+            for (i in 0 until current.level())
+                path[i]!!.next[i] = current.next(i)
+
+            size--
+            return current.value()
+        }
+    }
+
+    override fun isEmpty(): Boolean = size == 0
+
+    //just make operation like when start work with SkipList
+    override fun clear() {
+        size = 0
+        heads = ArrayList(MAX_HEIGHT)
+        for (i in 0 until MAX_HEIGHT) {
+            heads.add(i, null)
+        }
+    }
+
+    override fun retainAll(elements: Collection<T>): Boolean {
+        TODO("not implemented")
+    }
+
+    override fun subList(fromIndex: Int, toIndex: Int): MutableList<T> {
+        TODO("not implemented")
+    }
+
+    override fun indexOf(element: T): Int {
+        TODO("not implemented")
+    }
+
+    override fun lastIndexOf(element: T): Int {
+        TODO("not implemented")
+    }
+
+    override fun iterator(): MutableIterator<T> = SkipListIterator()
+
+    override fun listIterator(): MutableListIterator<T> {
+        TODO("not implemented")
+    }
+
+    override fun listIterator(index: Int): MutableListIterator<T> {
+        TODO("not implemented")
+    }
+
+    inner class SkipListIterator: MutableIterator<T> {
+
+        override fun hasNext(): Boolean {
+            TODO("not implemented")
+        }
+
+        override fun next(): T {
+            TODO("not implemented")
+        }
+
+        override fun remove() {
+            TODO("not implemented")
+        }
+    }
 }
 
+
 fun main() {
-    println(SkipList().p)
-    //println(SkipList().pickHeight())
+    println(SkipList<Int>())
+//    var sum = 0
+//    for (i in 0..5000) {
+//        sum += SkipList<Int>().jumpToLevel()
+//    }
+//    println(sum)
+//    println("${sum.toDouble()/5000.0}")
+//
+//    for (i in 0..100000)
+//        if (SkipList<Int>().jumpToLevel() >= 11) println("good!")
 }
