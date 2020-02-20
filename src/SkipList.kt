@@ -1,6 +1,7 @@
 import java.util.*
 import kotlin.math.E
 
+//need sort!
 class SkipList<T>: MutableList<T> {
 
     override var size: Int = 0
@@ -9,7 +10,7 @@ class SkipList<T>: MutableList<T> {
      */
     val MAX_HEIGHT = 12
 
-    val head: Node<T>? = null
+    private val head: Node<T>? = null
     /**
      * One of my thing in mind, for practical realisation best chance is 1/2,
      * use 5/16 if u have less than 5k elements, using 1/E for 1kk elements and more(best for +unlimited)
@@ -20,7 +21,7 @@ class SkipList<T>: MutableList<T> {
      *
      * @thanks Petrov M.A.
      */
-    val tail = head?.next?.add(null)
+    private val tail = head?.next?.add(null)
     /**
      * init the tower of first nulls elements of MAX_HEIGHT
      */
@@ -34,9 +35,9 @@ class SkipList<T>: MutableList<T> {
 
     inner class Node<T>(private var element: T) {
         //val nextAsQuestion = LinkedList<Node<T>?>()
-        var next = ArrayList<Node<T>?>() //link to next
+        var next = ArrayList<Node<T>?>() //link to next tower of Nodes
         fun level(): Int = next.size - 1
-        fun next(lvl: Int): Node<T>? = next[lvl]
+        fun next(lvl: Int): Node<T>? = next[lvl] //link to next on some lvl
         fun value(): T = element
         fun setValue(value: T) {
             element = value
@@ -53,24 +54,40 @@ class SkipList<T>: MutableList<T> {
                 next.add(indexOfElement, null)
         }
     }
-
+    //easy realisation its just a brute force elements in a loop to index what we need
+    //and optional for get, its a use lengths(we know about in a list on height 0 - we have all elements,
+    //and the length of line from element to element is equals to 0, so with this info,
+    // we can calcute upper lists length of distance between elements
     override fun get(index: Int): T {
-        TODO("not implemented")
+        checkOfBound(index)
+            var thisIndex = heads[0]
+            for (i in 0 until index)
+                thisIndex = thisIndex!!.next[0]
+            return thisIndex!!.value()
     }
 
+    //Replace the element at the specified position in this list with the specified element
     override fun set(index: Int, element: T): T {
-        TODO("not implemented")
+//        if (contains(element))
+//        var temp: Node<T>? = null
+        checkOfBound(index)
+            var thisIndex = heads[0]
+            for (i in 0 until index)
+                thisIndex = thisIndex!!.next[0]
+            thisIndex!!.setValue(element) //cannot be null, cos null in our realisation is mean we at NIL elements, so its not exist for SkipList iterator
+            return thisIndex.value()
     }
 
-    //find the element
+    //find the element in list or not in list
     override fun contains(element: T): Boolean {
+        @Suppress("UNCHECKED_CAST")
         val contains = element as Comparable<T>
-        var lvl = heads.size - 1
+        var lvl = heads.size - 1 //heads.size i.e. tower height
         //check how biggest tower is, for a little get more speed of a search
         //but in book, really found this doesn't helps a much, or a little bit
         //so it was really expected:)
         var temp = heads[lvl]
-        while (temp == null) lvl-- //we need make a link from -infinity to smth to work with this
+        while (temp?.next == null) lvl-- //its mean if we have a null element
         while (lvl >= 0) {
             if (temp != null) {
                 if (contains == temp.value())
@@ -95,6 +112,7 @@ class SkipList<T>: MutableList<T> {
     }
 
     override fun add(element: T): Boolean {
+        @Suppress("UNCHECKED_CAST")
         val add = element as Comparable<T> //for comparing!)
         val addThis: Node<T> = Node(element)
         val atLevel = addThis.level()
@@ -150,6 +168,7 @@ class SkipList<T>: MutableList<T> {
         return default
     }
 
+    //this realisation is need to compare the value of next cell of index in which level list we in
     override fun remove(element: T): Boolean {
         size--
         return true
@@ -176,9 +195,8 @@ class SkipList<T>: MutableList<T> {
 
     //remove at index
     override fun removeAt(index: Int): T {
-        if (index < 0 || index >= size)
-            throw IndexOutOfBoundsException("List properly not contains index like this!")
-        else if (index == 0) {
+        checkOfBound(index)
+        if (index == 0) {
             val special = heads[0]!!
             val element = special.value()
             for(i in 0 until special.level())
@@ -187,6 +205,7 @@ class SkipList<T>: MutableList<T> {
             return element!!
         } else {
             val element = get(index)
+            @Suppress("UNCHECKED_CAST")
             val removeAt = element as Comparable<T>
 
             //potential high of tower was deleted
@@ -271,18 +290,37 @@ class SkipList<T>: MutableList<T> {
             TODO("not implemented")
         }
     }
-}
 
+    override fun toString(): String {
+        return super.toString()
+    }
 
-fun main() {
-    println(SkipList<Int>())
-//    var sum = 0
-//    for (i in 0..5000) {
-//        sum += SkipList<Int>().jumpToLevel()
-//    }
-//    println(sum)
-//    println("${sum.toDouble()/5000.0}")
-//
-//    for (i in 0..100000)
-//        if (SkipList<Int>().jumpToLevel() >= 11) println("good!")
+    fun toString(a: SkipList<T>): String {
+        if (a == null) return "null"
+        val iMax: Int = a.size - 1
+        if (iMax == -1) return "[]"
+
+        return buildString {
+            append("[")
+            for (i in 0 until a.size) {
+                append(a[i])
+                if (i == iMax) return append("]").toString()
+                append(", ")
+            }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+
+    //Optional functions
+    private fun checkOfBound(index: Int) {
+        if (index < 0 || index >= size)
+            throw IndexOutOfBoundsException("List properly not contains index like this!")
+    }
 }
