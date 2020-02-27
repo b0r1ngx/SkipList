@@ -18,9 +18,12 @@ class Tests {
         testList.add(3)
         testList.add(4)
         testList.add(5)
+        println(testList.size)
         testList.add(4)
-        println(testList)
-        println(testList.toString(testList))
+        println(testList.size)
+        println(testList.contains(10))
+        println(testList.contains(1))
+        //println(testList.toString(testList))
     }
 
     fun testRemove() {
@@ -36,13 +39,16 @@ class Tests {
     }
 
     fun testFewOperations() {
-        println(skipList.MAX_HEIGHT)
+        println(skipList.starter.size)
         println(skipList.size)
         println(skipList.add(1))
         println(skipList.add(5))
         println(skipList.size)
         println(skipList.add(1))
         println(skipList.size)
+        println(skipList.contains(1))
+        println(skipList.contains(6))
+
     }
 }
 

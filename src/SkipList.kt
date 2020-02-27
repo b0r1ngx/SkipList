@@ -1,6 +1,7 @@
 import java.util.*
 import kotlin.math.E
 
+
 //need sort!
 class SkipList<T>: MutableList<T> {
 
@@ -23,13 +24,15 @@ class SkipList<T>: MutableList<T> {
      */
     private val tail = head?.next?.add(null)
     /**
-     * init the tower of first nulls elements of MAX_HEIGHT
+     * init the tower of first nulls elements, i.e. START ELEMENT, with height: MAX_HEIGHT
      */
-    var heads = ArrayList<Node<T>?>(MAX_HEIGHT)
-    init {//size of heads is 12, so its a list on a level 0 with all elements
-        //and a heads+1 list with fewer elements
+    var starter = ArrayList<Node<T>?>(MAX_HEIGHT)
+    //hidden getter
+    //hidden setter
+    init {//size of starter is 12, so its a list on a level 0 with all elements
+        //and a starter+1 list with fewer elements
         for (level in 0 until MAX_HEIGHT) {
-            heads.add(level, null)
+            starter.add(level, null)
         }
     }
 
@@ -60,7 +63,7 @@ class SkipList<T>: MutableList<T> {
     // we can calcute upper lists length of distance between elements
     override fun get(index: Int): T {
         checkOfBound(index)
-            var thisIndex = heads[0]
+            var thisIndex = starter[0]
             for (i in 0 until index)
                 thisIndex = thisIndex!!.next[0]
             return thisIndex!!.value()
@@ -71,7 +74,7 @@ class SkipList<T>: MutableList<T> {
 //        if (contains(element))
 //        var temp: Node<T>? = null
         checkOfBound(index)
-            var thisIndex = heads[0]
+            var thisIndex = starter[0]
             for (i in 0 until index)
                 thisIndex = thisIndex!!.next[0]
             thisIndex!!.setValue(element) //cannot be null, cos null in our realisation is mean we at NIL elements, so its not exist for SkipList iterator
@@ -82,12 +85,13 @@ class SkipList<T>: MutableList<T> {
     override fun contains(element: T): Boolean {
         @Suppress("UNCHECKED_CAST")
         val contains = element as Comparable<T>
-        var lvl = heads.size - 1 //heads.size i.e. tower height
+        var lvl = starter.size - 1 //starter.size i.e. tower height //
         //check how biggest tower is, for a little get more speed of a search
         //but in book, really found this doesn't helps a much, or a little bit
         //so it was really expected:)
-        var temp = heads[lvl]
-        while (temp?.next == null) lvl-- //its mean if we have a null element
+        while (starter[lvl] == null) lvl-- //its mean if we have a null element
+
+        var temp = starter[lvl]
         while (lvl >= 0) {
             if (temp != null) {
                 if (contains == temp.value())
@@ -124,10 +128,10 @@ class SkipList<T>: MutableList<T> {
         var thisNode: Node<T>? = head
         for (lvl in MAX_HEIGHT - 1 downTo 0) {
             if (thisNode == null) {
-                if (heads[lvl] == null || add < heads[lvl]!!.value())
+                if (starter[lvl] == null || add < starter[lvl]!!.value())
                     path[lvl] = null
                 else {
-                    thisNode = heads[lvl]
+                    thisNode = starter[lvl]
                     while (thisNode?.next(lvl) != null && add > thisNode.next(lvl)!!.value())
                         thisNode = thisNode.next(lvl)!! //not null already so then add
                     path[lvl] = thisNode
@@ -141,8 +145,8 @@ class SkipList<T>: MutableList<T> {
 //add new element to structure
         for (lvl in 0 until atLevel) {
             if (path[lvl] == null) {
-                addThis.next[lvl] = heads[lvl]
-                heads[lvl] = addThis
+                addThis.next[lvl] = starter[lvl]
+                starter[lvl] = addThis
             } else {
                 addThis.next[lvl] = path[lvl]!!.next(lvl)
                 path[lvl]!!.next[lvl] = addThis
@@ -192,15 +196,14 @@ class SkipList<T>: MutableList<T> {
         }
         return modified
     }
-
     //remove at index
     override fun removeAt(index: Int): T {
         checkOfBound(index)
         if (index == 0) {
-            val special = heads[0]!!
+            val special = starter[0]!!
             val element = special.value()
             for(i in 0 until special.level())
-                heads[i] = special.next(i)
+                starter[i] = special.next(i)
             size--
             return element!!
         } else {
@@ -216,10 +219,10 @@ class SkipList<T>: MutableList<T> {
             var thisNode: Node<T>? = head
             for (lvl in MAX_HEIGHT - 1 downTo 0)
                 if (thisNode == null) {
-                    if (heads[lvl] == null || removeAt < heads[lvl]!!.value())
+                    if (starter[lvl] == null || removeAt < starter[lvl]!!.value())
                         path[lvl] = null
                     else {
-                        thisNode = heads[lvl]
+                        thisNode = starter[lvl]
                         while (thisNode!!.next(lvl) != null && removeAt > thisNode.next(lvl)!!.value())
                             thisNode = thisNode.next(lvl)
                         path[lvl] = thisNode
@@ -244,9 +247,9 @@ class SkipList<T>: MutableList<T> {
     //just make operation like when start work with SkipList
     override fun clear() {
         size = 0
-        heads = ArrayList(MAX_HEIGHT)
+        starter = ArrayList(MAX_HEIGHT)
         for (i in 0 until MAX_HEIGHT) {
-            heads.add(i, null)
+            starter.add(i, null)
         }
     }
 
@@ -292,8 +295,14 @@ class SkipList<T>: MutableList<T> {
     }
 
     override fun toString(): String {
-        return super.toString()
+        var output = ""
+
+        return output
     }
+
+//    override fun toString(): String {
+//        return this.a[i]
+//    }
 
     fun toString(a: SkipList<T>): String {
         if (a == null) return "null"
